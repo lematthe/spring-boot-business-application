@@ -1,1 +1,55 @@
+*Sample Business Application for Spring Boot*
 
+For reproducing the issue with *@SequenceGenerator* and *allocatedSize*.
+
+* Clone this workspce
+* Create a postgres database instance and create the role 'jbpm', with a password 'jbpm':
+** psql>  CREATE USER jpbm SUPERUSER LOGIN PASSWORD jpbm
+* Create a database in this instance named 'jbpm':
+** psql> CREATE DATABASE jbpm
+
+* If using openshift, port forward from the localhost:5432 to <pod_name>:5432:
+** oc port-forward <pod_name> 5432:5432
+* Alternatively, if you need to change the postgres URL, amend the ./business-application-service/src/main/application-postgres.properties file:
+** spring.datasource.url=jdbc:postgresql://localhost:5432/jbpm
+
+* Delpoy the jpbm-schema.sql to the jpbm database
+** psql postgres://jbpm:jbpm@localhost:5432/jbpm -a -f ./ddl-scripts/postgresql-jbpm-schema.sql
+* if you changed the postgres URL make sure to refelect it here
+
+* The database schema should now deploy successfully:
+* Check the database schema
+** psql> connect jpbm
+** psql> \dt
+** This should list all of the database tables for Process Automation Manager
+
+* Start the application:
+** cd business-application-service
+** ./launch.sh clean install -Ppostgres
+
+* You should recieve the following error:
+
+** *Caused by: org.hibernate.MappingException: The increment size of the [TASK_DEF_ID_SEQ] sequence is set to [50] in the entity mapping while the associated database sequence increment size is [1].*
+
+* This is due to the allocationSize in the PAM code defaulting to a size of '50' and the Postgres INCREMENT BY defaulting to 1. To check this is the case, amend the TASK_DEF_ID_SEQ sequence to 50:
+
+** psql> ALTER SEQUENCE TASK_DEF_ID_SEQ INCREMENT BY 50
+** ./launch.sh clean install -Ppostgres
+
+* You should recieve the following error:
+
+** *Caused by: org.hibernate.MappingException: The increment size of the [CORRELATION_KEY_ID_SEQ] sequence is set to [50] in the entity mapping while the associated database sequence increment size is [1].*
+
+* The following sequences would need to be amended:
+** bam_task_id_seq
+** case_id_info_id_seq
+** context_mapping_info_id_seq
+** correlation_key_id_seq
+** correlation_prop_id_seq
+** error_info_id_seq
+** process_instance_info_id_seq
+** request_info_id_seq
+** sessioninfo_id_seq
+** task_def_id_seq
+** task_event_id_seq
+** workiteminfo_id_seq
